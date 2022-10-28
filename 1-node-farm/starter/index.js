@@ -1,6 +1,12 @@
 const fs = require("fs");
 const http = require("http");
 const url = require("url");
+const slugify = require("slugify");
+const replaceTemplates = require(`${__dirname}/modules/replaceTemplates`);
+
+const errorHandler = (error) => {
+  if (error) console.error(error);
+};
 
 // const hello = "Hello world";
 // console.log(hello);
@@ -18,10 +24,6 @@ const url = require("url");
 //   else console.log(data);
 // });
 // console.log("Will read file");
-
-const errorHandler = (error) => {
-  if (error) console.error(error);
-};
 
 // fs.readFile("./txt/start.txt", "utf-8", (error, data1) => {
 //   errorHandler(error);
@@ -47,22 +49,6 @@ const errorHandler = (error) => {
 
 /////////////////////////////////////////////////
 // SERVER
-
-function replaceTemplate(template, product) {
-  let output = template.replace(/{%PRODUCTNAME%}/g, product.productName);
-  output = output.replace(/{%IMAGE%}/g, product.image);
-  output = output.replace(/{%PRICE%}/g, product.price);
-  output = output.replace(/{%FROM%}/g, product.from);
-  output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
-  output = output.replace(/{%QUANTITY%}/g, product.quantity);
-  output = output.replace(/{%DESCRIPTION%}/g, product.description);
-  output = output.replace(/{%ID%}/g, product.id);
-
-  if (!product.organic)
-    output = output.replace(/{%NOT_ORGANIC%}/g, "not-organic");
-
-  return output;
-}
 
 const templateOverview = fs.readFileSync(
   `${__dirname}/templates/template-overview.html`,
@@ -96,6 +82,15 @@ const server = http.createServer((req, res) => {
   router(req, res);
 });
 
+// Demonstarion of connecting 3rd party modules;
+const slugs = dataObj.map((element) =>
+  slugify(element.productName, {
+    lower: true,
+  })
+);
+console.log(slugs);
+//
+
 const router = (req, res) => {
   const { query, pathname } = url.parse(req.url, true);
 
@@ -103,7 +98,7 @@ const router = (req, res) => {
     case "/":
       res.writeHead(200, { "Content-type": "text/html" });
       const cardsHtml = dataObj
-        .map((element) => replaceTemplate(templateCard, element))
+        .map((element) => replaceTemplates(templateCard, element))
         .join("");
       const productsOutput = templateOverview.replace(
         "{%PRODUCT_CARDS%}",
@@ -120,7 +115,7 @@ const router = (req, res) => {
       if (!product) error404(res);
       else {
         res.writeHead(200, { "Content-type": "text/html" });
-        const productOutput = replaceTemplate(templateProduct, product);
+        const productOutput = replaceTemplates(templateProduct, product);
         res.end(productOutput);
       }
 
